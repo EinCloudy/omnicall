@@ -57,6 +57,7 @@ services:
       MAX_CONCURRENT_CALLS: ${MAX_CONCURRENT_CALLS:-2}
       DEFAULT_CALL_TIMEOUT: ${DEFAULT_CALL_TIMEOUT:-45}
       MAX_CALL_DURATION: ${MAX_CALL_DURATION:-900}
+      DISCLOSURE_ENABLED: ${DISCLOSURE_ENABLED:-true}
       CONSENT_QUESTION_ENABLED: ${CONSENT_QUESTION_ENABLED:-true}
       GEMINI_VAD_PREFIX_PADDING_MS: ${GEMINI_VAD_PREFIX_PADDING_MS:-100}
       GEMINI_VAD_SILENCE_MS: ${GEMINI_VAD_SILENCE_MS:-650}
@@ -69,7 +70,7 @@ services:
           "CMD",
           "python",
           "-c",
-          "import socket; s=socket.create_connection(('127.0.0.1',8090),3); s.close()",
+          "import urllib.error, urllib.request; u='http://127.0.0.1:8090/mcp'; r=urllib.request.Request(u, headers={'Accept':'application/json, text/event-stream'}); urllib.request.urlopen(r, timeout=3)",
         ]
       interval: 10s
       timeout: 5s

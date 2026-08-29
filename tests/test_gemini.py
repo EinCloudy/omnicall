@@ -7,11 +7,16 @@ from google.genai import types
 from omnicall.gemini import GeminiClient, GeminiLiveSession
 
 
-def live_settings(*, consent_question_enabled: bool = True) -> SimpleNamespace:
+def live_settings(
+    *,
+    disclosure_enabled: bool = True,
+    consent_question_enabled: bool = True,
+) -> SimpleNamespace:
     return SimpleNamespace(
         gemini_voice="Kore",
         gemini_vad_prefix_padding_ms=100,
         gemini_vad_silence_ms=650,
+        disclosure_enabled=disclosure_enabled,
         consent_question_enabled=consent_question_enabled,
     )
 
@@ -69,6 +74,26 @@ def test_live_config_without_consent_question_starts_objective_directly() -> Non
     assert "direkt und ohne Warten" in instruction
 
 
+def test_live_config_without_disclosure_omits_notice_and_consent() -> None:
+    client = GeminiClient.__new__(GeminiClient)
+    client.settings = live_settings(disclosure_enabled=False)
+
+    config = client.build_live_config(
+        {
+            "objective": "Vereinbare einen Termin.",
+            "context": {"city": "Mannheim"},
+            "opening_message": None,
+        }
+    )
+
+    instruction = config.system_instruction
+    assert "Dieses Gespräch wird zur Bearbeitung transkribiert." not in instruction
+    assert "Sind Sie damit einverstanden?" not in instruction
+    assert "Beginne direkt" in instruction
+    assert "transkript" not in instruction.casefold()
+    assert "einwilligung" not in instruction.casefold()
+
+
 @pytest.mark.asyncio
 async def test_live_session_reuses_connection_for_audio_until_shutdown() -> None:
     raw = AsyncMock()
@@ -99,6 +124,12 @@ async def test_live_session_start_conversation_prompt_matches_consent_mode() -> 
     prompt = raw.send_realtime_input.await_args.kwargs["text"]
     assert "Einwilligungsfrage" not in prompt
     assert "direkt zum eigentlichen Anliegen" in prompt
+
+    raw = AsyncMock()
+    await GeminiLiveSession(raw, disclosure_enabled=False).start_conversation()
+    prompt = raw.send_realtime_input.await_args.kwargs["text"]
+    assert "direkt mit dem eigentlichen Anliegen" in prompt
+    assert "Begrüßung" not in prompt
 
 
 @pytest.mark.asyncio

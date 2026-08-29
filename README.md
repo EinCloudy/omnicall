@@ -17,8 +17,7 @@ stores the call history.
 - Stateful streaming resampling from 24 kHz Gemini PCM to 16 kHz telephone PCM
 - SQLite in WAL mode for calls, transcripts, summaries, and event cursors
 - No audio files stored on disk; only metadata and transcripts are persisted
-- AI and transcription notice in the first utterance, with an optional consent question
-  controlled by `CONSENT_QUESTION_ENABLED`
+- Configurable AI and transcription notice, with an optional consent question
 
 ## Architecture
 
@@ -115,7 +114,8 @@ Important variables in `.env.example`:
 | `MAX_CONCURRENT_CALLS` | `2`; adjust to the FritzBox and line capacity |
 | `DEFAULT_CALL_TIMEOUT` | Ringing timeout, 45 seconds by default |
 | `MAX_CALL_DURATION` | Hard call duration limit, 900 seconds by default |
-| `CONSENT_QUESTION_ENABLED` | `true`: ask for transcription consent before the conversation. `false`: continue directly after the AI and transcription notice |
+| `DISCLOSURE_ENABLED` | `true`: announce AI use and transcription. `false`: omit both the notice and consent question and begin the call directly |
+| `CONSENT_QUESTION_ENABLED` | When disclosure is enabled, `true` asks for transcription consent and `false` continues directly after the notice |
 | `GEMINI_LIVE_MODEL` | Native audio model, `gemini-3.1-flash-live-preview` by default |
 | `GEMINI_VAD_PREFIX_PADDING_MS` | Minimum duration before speech start, 100 ms by default |
 | `GEMINI_VAD_SILENCE_MS` | Silence before turn end, 650 ms by default |
@@ -147,9 +147,10 @@ permissions for the configured Gemini models.
 
 ## Privacy
 
-At the beginning of each call, the service discloses the use of AI and transcription and
-asks for consent when `CONSENT_QUESTION_ENABLED=true`. The disclosure remains in place even
-when the consent question is disabled. Operators remain responsible for verifying the laws,
-consent requirements, disclosure obligations, retention periods, and deletion processes
-that apply to their use case. The SQLite database contains personal conversation data and
-must be protected accordingly.
+By default, the service discloses the use of AI and transcription at the beginning of each
+call and asks for consent. `CONSENT_QUESTION_ENABLED=false` disables only the question, while
+`DISCLOSURE_ENABLED=false` disables both the notice and the question. Operators remain
+responsible for verifying whether disabling these safeguards is lawful for their use case,
+including applicable consent requirements, disclosure obligations, retention periods, and
+deletion processes. The SQLite database contains personal conversation data and must be
+protected accordingly.

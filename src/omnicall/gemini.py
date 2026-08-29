@@ -40,13 +40,22 @@ class LiveEvent:
 
 
 class GeminiLiveSession:
-    def __init__(self, session: Any, *, consent_required: bool = True) -> None:
+    def __init__(
+        self,
+        session: Any,
+        *,
+        disclosure_enabled: bool = True,
+        consent_required: bool = True,
+    ) -> None:
         self._session = session
+        self._disclosure_enabled = disclosure_enabled
         self._consent_required = consent_required
         self._audio_ended = False
 
     async def start_conversation(self) -> None:
-        if self._consent_required:
+        if not self._disclosure_enabled:
+            prompt = "Beginne jetzt das Telefonat direkt mit dem eigentlichen Anliegen."
+        elif self._consent_required:
             prompt = (
                 "Beginne jetzt das Telefonat mit der vorgeschriebenen transparenten "
                 "Begrüßung und Einwilligungsfrage."
@@ -185,13 +194,20 @@ class GeminiClient:
         ) as session:
             yield GeminiLiveSession(
                 session,
+                disclosure_enabled=self.settings.disclosure_enabled,
                 consent_required=self.settings.consent_question_enabled,
             )
 
     def build_live_config(self, call: dict[str, Any]) -> types.LiveConnectConfig:
         context = json.dumps(call["context"], ensure_ascii=False, indent=2)
         opening = call.get("opening_message") or "(keine besondere Formulierung vorgegeben)"
-        if self.settings.consent_question_enabled:
+        if not self.settings.disclosure_enabled:
+            opening_rules = (
+                "- Beginne direkt mit der optional gewünschten Eröffnung oder dem eigentlichen "
+                "Anliegen."
+            )
+            transcription_rule = ""
+        elif self.settings.consent_question_enabled:
             opening_rules = """
 - Deine allererste Äußerung lautet wortgetreu: "Guten Tag, ich bin ein KI-gestützter digitaler
   Assistent. Dieses Gespräch wird zur Bearbeitung transkribiert. Sind Sie damit einverstanden?"
@@ -201,12 +217,20 @@ class GeminiClient:
 - Bei abgelehnter Transkription entschuldigst du dich, verabschiedest dich und rufst danach
   finish_call mit action=end auf.
 """.strip()
+            transcription_rule = """
+- Behaupte niemals, dass Audio aufgezeichnet oder zur Verbesserung ausgewertet wird. Es werden
+  ausschließlich Transkripte zur Bearbeitung erstellt.
+""".strip()
         else:
             opening_rules = """
 - Deine allererste Äußerung beginnt wortgetreu mit: "Guten Tag, ich bin ein KI-gestützter digitaler
   Assistent. Dieses Gespräch wird zur Bearbeitung transkribiert."
 - Stelle keine Einwilligungsfrage. Gehe nach dieser Eröffnung direkt und ohne Warten auf eine
   Zustimmung zum eigentlichen Anliegen über.
+""".strip()
+            transcription_rule = """
+- Behaupte niemals, dass Audio aufgezeichnet oder zur Verbesserung ausgewertet wird. Es werden
+  ausschließlich Transkripte zur Bearbeitung erstellt.
 """.strip()
         instruction = f"""
 Du führst im Auftrag von OmniCall einen echten Telefonanruf auf Deutsch.
@@ -225,8 +249,7 @@ Regeln:
 - Erfinde keine Fakten, Zusagen, Identitäten oder Befugnisse.
 - Nenne Zahlen, Namen und Termine eindeutig und bestätige kritische Angaben.
 {opening_rules}
-- Behaupte niemals, dass Audio aufgezeichnet oder zur Verbesserung ausgewertet wird. Es werden
-  ausschließlich Transkripte zur Bearbeitung erstellt.
+{transcription_rule}
 - Wenn das Ziel erreicht ist oder die Person das Gespräch beenden möchte, verabschiedest du dich
   zuerst hörbar, beendest deine Verabschiedung mit dem Satz "Auf Wiederhören." und rufst danach
   finish_call mit action=end auf.

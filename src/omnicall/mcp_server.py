@@ -91,7 +91,7 @@ async def start_call(
         phone_number: Destination number, preferably in E.164 format such as +4962112345.
         objective: Concrete outcome and boundaries for the phone conversation.
         context: Relevant facts the calling agent may use; omit secrets that are not needed.
-        opening_message: Optional wording for the greeting after mandatory AI disclosure.
+        opening_message: Optional wording for the greeting after any configured disclosure.
         max_duration_seconds: Optional duration cap, bounded by the server maximum.
     """
     call = await service().start_call(

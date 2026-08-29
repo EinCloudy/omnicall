@@ -55,6 +55,7 @@ class Settings:
     max_concurrent_calls: int
     default_call_timeout: int
     max_call_duration: int
+    disclosure_enabled: bool
     consent_question_enabled: bool
     gemini_vad_prefix_padding_ms: int
     gemini_vad_silence_ms: int
@@ -101,6 +102,7 @@ class Settings:
             max_concurrent_calls=_int("MAX_CONCURRENT_CALLS", 2),
             default_call_timeout=_int("DEFAULT_CALL_TIMEOUT", 45),
             max_call_duration=_int("MAX_CALL_DURATION", 900),
+            disclosure_enabled=_bool("DISCLOSURE_ENABLED", True),
             consent_question_enabled=_bool("CONSENT_QUESTION_ENABLED", True),
             gemini_vad_prefix_padding_ms=_int("GEMINI_VAD_PREFIX_PADDING_MS", 100),
             gemini_vad_silence_ms=_int("GEMINI_VAD_SILENCE_MS", 650),

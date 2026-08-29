@@ -1,0 +1,61 @@
+[global]
+type = global
+user_agent = Hermes-Calling
+
+[transport-udp]
+type = transport
+protocol = udp
+bind = 0.0.0.0:5060
+allow_reload = no
+
+[fritz-auth]
+type = auth
+auth_type = userpass
+username = ${SIP_USERNAME}
+password = ${SIP_PASSWORD}
+
+[fritz-aor]
+type = aor
+contact = sip:${SIP_REGISTRAR}
+qualify_frequency = 30
+qualify_timeout = 3.0
+
+[fritzbox]
+type = endpoint
+transport = transport-udp
+context = from-fritzbox
+disallow = all
+allow = alaw
+allow = ulaw
+aors = fritz-aor
+outbound_auth = fritz-auth
+from_user = ${SIP_USERNAME}
+from_domain = ${SIP_REGISTRAR}
+callerid = ${SIP_CALLER_ID}
+direct_media = no
+force_rport = yes
+rewrite_contact = yes
+rtp_symmetric = yes
+send_pai = yes
+trust_id_outbound = yes
+timers = yes
+
+[fritz-identify]
+type = identify
+endpoint = fritzbox
+match = ${SIP_REGISTRAR}
+
+[fritz-registration]
+type = registration
+transport = transport-udp
+outbound_auth = fritz-auth
+server_uri = sip:${SIP_REGISTRAR}
+client_uri = sip:${SIP_USERNAME}@${SIP_REGISTRAR}
+contact_user = ${SIP_USERNAME}
+retry_interval = 20
+max_retries = 0
+forbidden_retry_interval = 300
+fatal_retry_interval = 300
+expiration = 300
+line = yes
+endpoint = fritzbox

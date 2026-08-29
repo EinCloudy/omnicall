@@ -1,0 +1,8 @@
+[${MEDIA_CONNECTION}]
+type = websocket_client
+uri = ws://127.0.0.1:${MEDIA_PORT}/media
+protocols = media
+connection_type = per_call_config
+connection_timeout = 2000
+reconnect_interval = 1000
+tls_enabled = no

@@ -1,0 +1,80 @@
+name: hermes-calling
+
+services:
+  asterisk:
+    build:
+      context: ./asterisk
+    image: hermes-calling-asterisk:23.4.1
+    network_mode: host
+    restart: unless-stopped
+    environment:
+      ASTERISK_TERMINAL_OPTS: "-n"
+      ARI_USER: ${ARI_USER:-hermes}
+      ARI_PASSWORD: ${ARI_PASSWORD:?ARI_PASSWORD is required}
+      MEDIA_CONNECTION: ${MEDIA_CONNECTION:-hermes_media}
+      MEDIA_PORT: ${MEDIA_PORT:-8765}
+      SIP_REGISTRAR: ${SIP_REGISTRAR:-fritz.box}
+      SIP_USERNAME: ${SIP_USERNAME:?SIP_USERNAME is required}
+      SIP_PASSWORD: ${SIP_PASSWORD:?SIP_PASSWORD is required}
+      SIP_CALLER_ID: ${SIP_CALLER_ID:?SIP_CALLER_ID is required}
+    healthcheck:
+      test: ["CMD", "/usr/local/bin/healthcheck.sh"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 15s
+
+  calling-mcp:
+    build:
+      context: .
+    image: hermes-calling-mcp:local
+    network_mode: host
+    restart: unless-stopped
+    depends_on:
+      asterisk:
+        condition: service_healthy
+    environment:
+      GEMINI_API_KEY: ${GEMINI_API_KEY:?GEMINI_API_KEY is required}
+      GEMINI_LIVE_MODEL: ${GEMINI_LIVE_MODEL:-gemini-3.1-flash-live-preview}
+      GEMINI_SUMMARY_MODEL: ${GEMINI_SUMMARY_MODEL:-gemini-3.7-flash}
+      GEMINI_SUMMARY_FALLBACK_MODEL: ${GEMINI_SUMMARY_FALLBACK_MODEL:-gemini-3.6-flash}
+      GEMINI_VOICE: ${GEMINI_VOICE:-Kore}
+      DATABASE_PATH: /data/calls.db
+      ARI_URL: http://127.0.0.1:8088/ari
+      ARI_WS_URL: ws://127.0.0.1:8088/ari/events
+      ARI_USER: ${ARI_USER:-hermes}
+      ARI_PASSWORD: ${ARI_PASSWORD:?ARI_PASSWORD is required}
+      ARI_APP: ${ARI_APP:-hermes-calling}
+      SIP_CALLER_ID: ${SIP_CALLER_ID:?SIP_CALLER_ID is required}
+      SIP_ENDPOINT: fritzbox
+      SIP_DIAL_PREFIX: ${SIP_DIAL_PREFIX:-}
+      MEDIA_HOST: 127.0.0.1
+      MEDIA_PORT: ${MEDIA_PORT:-8765}
+      MEDIA_CONNECTION: ${MEDIA_CONNECTION:-hermes_media}
+      MCP_HOST: ${MCP_HOST:-127.0.0.1}
+      MCP_PORT: ${MCP_PORT:-8090}
+      MCP_TRANSPORT: streamable-http
+      MAX_CONCURRENT_CALLS: ${MAX_CONCURRENT_CALLS:-2}
+      DEFAULT_CALL_TIMEOUT: ${DEFAULT_CALL_TIMEOUT:-45}
+      MAX_CALL_DURATION: ${MAX_CALL_DURATION:-900}
+      CONSENT_QUESTION_ENABLED: ${CONSENT_QUESTION_ENABLED:-true}
+      GEMINI_VAD_PREFIX_PADDING_MS: ${GEMINI_VAD_PREFIX_PADDING_MS:-100}
+      GEMINI_VAD_SILENCE_MS: ${GEMINI_VAD_SILENCE_MS:-650}
+      GEMINI_LIVE_CONNECT_TIMEOUT_SECONDS: ${GEMINI_LIVE_CONNECT_TIMEOUT_SECONDS:-15}
+    volumes:
+      - call-data:/data
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import socket; s=socket.create_connection(('127.0.0.1',8090),3); s.close()",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+
+volumes:
+  call-data:

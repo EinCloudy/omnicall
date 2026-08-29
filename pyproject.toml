@@ -1,0 +1,42 @@
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[project]
+name = "hermes-calling-mcp"
+version = "0.1.0"
+description = "MCP server for persistent AI phone calls through a FritzBox"
+readme = "README.md"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+  "aiohttp>=3.12,<4",
+  "aiosqlite>=0.21,<1",
+  "google-genai[aiohttp]>=1.64,<3",
+  "mcp>=1.26,<2",
+  "uvicorn>=0.31,<1",
+  "websockets>=15,<16",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.4,<9",
+  "pytest-asyncio>=1.1,<2",
+  "ruff>=0.12,<1",
+]
+
+[project.scripts]
+hermes-calling-mcp = "hermes_calling.mcp_server:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/hermes_calling"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "ASYNC"]

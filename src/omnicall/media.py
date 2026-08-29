@@ -448,6 +448,7 @@ class CallMediaSession:
     async def _handle_interruption(self) -> None:
         interrupted_generation = self._generation
         await self._flush_transcript("output")
+        farewell_interrupted = self._output_contains_farewell()
         self._generation += 1
         self._pending_finish = None
         self._resampler.reset()
@@ -469,6 +470,21 @@ class CallMediaSession:
             {"generation": interrupted_generation},
         )
         logger.info("flushed interrupted Gemini audio for call %s", self.call_id)
+        if farewell_interrupted and not self._finish_started:
+            self._finish_started = True
+            await self.database.add_event(
+                self.call_id,
+                "finish_fallback",
+                {"reason": "interrupted_spoken_farewell"},
+            )
+            logger.info("ending call %s after interrupted spoken farewell", self.call_id)
+            await self.finish_callback(self.call_id, "end", None)
+
+    def _output_contains_farewell(self) -> bool:
+        return any(
+            phrase in self._last_output_transcript.casefold()
+            for phrase in FAREWELL_PHRASES
+        )
 
     async def _append_transcript(self, speaker: str, text: str, finished: bool) -> None:
         parts = (

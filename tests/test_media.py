@@ -59,6 +59,23 @@ async def test_live_interruption_flushes_asterisk_and_stale_audio() -> None:
 
 
 @pytest.mark.asyncio
+async def test_interrupted_farewell_ends_call_without_repeating_it() -> None:
+    session = make_session()
+    session._output_transcript_parts.append("Alles klar, danke. Auf Wiederhören.")
+    session._speaking = True
+
+    await session._handle_interruption()
+
+    assert session._finish_started is True
+    assert session.database.add_event.await_args_list[1].args == (
+        "test-call",
+        "finish_fallback",
+        {"reason": "interrupted_spoken_farewell"},
+    )
+    session.finish_callback.assert_awaited_once_with("test-call", "end", None)
+
+
+@pytest.mark.asyncio
 async def test_agent_transcript_waits_for_callee_turn() -> None:
     class FakeLive:
         async def events(self):

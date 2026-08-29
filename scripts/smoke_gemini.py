@@ -2,8 +2,8 @@ import asyncio
 
 from dotenv import load_dotenv
 
-from hermes_calling.config import Settings
-from hermes_calling.gemini import GeminiClient
+from omnicall.config import Settings
+from omnicall.gemini import GeminiClient
 
 
 async def main() -> None:

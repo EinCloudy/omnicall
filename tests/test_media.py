@@ -5,8 +5,8 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from hermes_calling.gemini import LiveEvent
-from hermes_calling.media import CallMediaSession, _OutputItem
+from omnicall.gemini import LiveEvent
+from omnicall.media import CallMediaSession, _OutputItem
 
 
 def make_session() -> CallMediaSession:

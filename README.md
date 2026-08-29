@@ -1,134 +1,134 @@
-# Hermes Calling MCP
+# OmniCall
 
-Ein langlebiger MCP-Dienst für ausgehende KI-Telefonate über einen lokalen
-FritzBox-SIP-Benutzer. Asterisk übernimmt SIP, Rufzustände, RTP und Audio-Timing. Der
-Python-Dienst übernimmt Hermes-MCP, eine persistente Gemini-Live-Audiositzung pro Anruf
-und die persistente Historie.
+OmniCall is a persistent MCP service for outbound AI phone calls through a local FritzBox
+SIP account. Asterisk handles SIP, call states, RTP, and audio timing. The Python service
+provides the OmniCall MCP server, maintains one Gemini Live audio session per call, and
+stores the call history.
 
-## Eigenschaften
+## Features
 
-- Streamable HTTP MCP unter `http://127.0.0.1:8090/mcp`
-- Parallele, begrenzte Anrufwarteschlange mit sauberem Abbruch und Neustart-Recovery
-- `gemini-3.1-flash-live-preview` für native, bidirektionale Audiogespräche
-- Eine Gemini-Live-Sitzung über die gesamte Dauer jedes Telefonats
-- `gemini-3.7-flash` mit `gemini-3.6-flash`-Fallback für Zusammenfassungen
-- 16-kHz-PCM-Medienpfad über Asterisk `chan_websocket`
-- Gemini-VAD mit echtem Barge-in und sofortigem Asterisk `FLUSH_MEDIA`
-- Zustandsbehaftetes Streaming-Resampling von Gemini-PCM mit 24 kHz auf Telefon-PCM mit 16 kHz
-- SQLite im WAL-Modus mit Anrufen, Transkript, Zusammenfassung und Event-Cursor
-- Keine Audiodateien auf Platte; gespeichert werden Metadaten und Transkripte
-- KI- und Transkriptionshinweis in der ersten Äußerung, optional mit Einwilligungsfrage
-  (`CONSENT_QUESTION_ENABLED`)
+- Streamable HTTP MCP endpoint at `http://127.0.0.1:8090/mcp`
+- Concurrent, bounded call queue with clean cancellation and restart recovery
+- `gemini-3.1-flash-live-preview` for native bidirectional audio conversations
+- One persistent Gemini Live session for the full duration of each call
+- `gemini-3.7-flash` with a `gemini-3.6-flash` fallback for summaries
+- 16 kHz PCM media path through Asterisk `chan_websocket`
+- Gemini VAD with real barge-in and immediate Asterisk `FLUSH_MEDIA`
+- Stateful streaming resampling from 24 kHz Gemini PCM to 16 kHz telephone PCM
+- SQLite in WAL mode for calls, transcripts, summaries, and event cursors
+- No audio files stored on disk; only metadata and transcripts are persisted
+- AI and transcription notice in the first utterance, with an optional consent question
+  controlled by `CONSENT_QUESTION_ENABLED`
 
-## Architektur
+## Architecture
 
 ```text
-Hermes Agent -- MCP/HTTP --> Calling Service -- Gemini API
+MCP agent -- MCP/HTTP --> OmniCall -- Gemini API
                               |       |
                               |       +-- SQLite /data/calls.db
                               |
                               +-- ARI + PCM/WebSocket --> Asterisk -- SIP/RTP --> FritzBox
 ```
 
-Die Container verwenden unter Linux Host-Networking. Das vermeidet SIP-/RTP-NAT-Probleme
-und lässt Asterisk die FritzBox direkt im LAN erreichen. ARI und Medien-WebSocket binden
-ausschließlich an `127.0.0.1`. Der MCP-Endpunkt bindet standardmäßig ebenfalls an
-`127.0.0.1`; mit `MCP_HOST=0.0.0.0` in der `.env` ist er im gesamten LAN unter
-`http://<Host-IP>:8090/mcp` erreichbar. Der Endpunkt hat keine Authentifizierung – jedes
-Gerät im Netz kann dann Anrufe auslösen.
+The containers use host networking on Linux. This avoids SIP and RTP NAT issues and lets
+Asterisk reach the FritzBox directly on the LAN. ARI and the media WebSocket bind only to
+`127.0.0.1`. The MCP endpoint also binds to `127.0.0.1` by default. Set
+`MCP_HOST=0.0.0.0` in `.env` to expose it to the entire LAN at
+`http://<host-ip>:8090/mcp`. The endpoint has no authentication, so any device on the
+network can initiate calls when it is exposed.
 
-Nach der Rufannahme öffnet der Dienst genau eine Gemini-Live-Verbindung. Eingehendes
-Telefon-Audio wird kontinuierlich in 100-ms-Blöcken gesendet; Geminis native Audioantwort
-wird bereits während der Erzeugung an Asterisk weitergeleitet. Erkennt Gemini Sprache des
-Gesprächspartners während einer Antwort, verwirft der Dienst alle noch nicht abgespielten
-Frames. Während der verpflichtenden ersten Einwilligungsfrage bleibt der Eingang gesperrt,
-damit Echo diese Ansage nicht unterbrechen kann.
+After a call is answered, the service opens exactly one Gemini Live connection. Incoming
+telephone audio is sent continuously in 100 ms blocks, while Gemini's native audio response
+is forwarded to Asterisk as it is generated. If Gemini detects the other party speaking
+during a response, the service discards every frame that has not yet been played. Input
+remains blocked during the mandatory initial consent question so that echo cannot interrupt
+the announcement.
 
-## Start
+## Getting Started
 
-Die lokale `.env` ist absichtlich per `.gitignore` ausgeschlossen. Sie enthält die
-FritzBox-, Gemini- und interne ARI-Konfiguration.
+The local `.env` file is intentionally excluded through `.gitignore`. It contains the
+FritzBox, Gemini, and internal ARI configuration. Create it from `.env.example` and provide
+the required credentials before starting the services.
 
 ```bash
 docker compose up -d --build
 docker compose ps
 ```
 
-Registrierung und Logs prüfen:
+Check SIP registration and logs:
 
 ```bash
 docker compose exec asterisk asterisk -rx "pjsip show registrations"
 docker compose exec asterisk asterisk -rx "pjsip show endpoint fritzbox"
-docker compose logs -f calling-mcp asterisk
+docker compose logs -f omnicall-mcp asterisk
 ```
 
-Die FritzBox muss den IP-Telefon-Benutzer für ausgehende Gespräche freigeben und ihm die
-gewünschte ausgehende Rufnummer zuweisen. Wenn `fritz.box` auf dem Docker-Host nicht
-auflösbar ist, wird `SIP_REGISTRAR` auf die LAN-IP der FritzBox gesetzt.
+The FritzBox must allow outbound calls for the IP phone account and assign the desired
+outbound phone number to it. If the Docker host cannot resolve `fritz.box`, set
+`SIP_REGISTRAR` to the FritzBox LAN IP address.
 
 ## Hermes Agent
 
-Hermes liest MCP-Server aus `~/.hermes/config.yaml`:
+Hermes reads MCP server definitions from `~/.hermes/config.yaml`:
 
 ```yaml
 mcp_servers:
-  hermes-calling:
+  omnicall:
     url: http://127.0.0.1:8090/mcp
     connect_timeout: 15
     timeout: 60
     supports_parallel_tool_calls: false
 ```
 
-Nach einer Konfigurationsänderung Hermes neu starten oder in einer laufenden Sitzung
-`/reload-mcp` ausführen. Die Tools erscheinen mit dem Hermes-Präfix
-`mcp_hermes-calling_*`.
+Restart Hermes after changing the configuration, or run `/reload-mcp` in an active
+session. The tools are exposed with the Hermes prefix `mcp_omnicall_*`.
 
-## MCP-Tools
+## MCP Tools
 
-| Tool | Zweck |
+| Tool | Purpose |
 | --- | --- |
-| `start_call` | Anruf mit Ziel, Kontext und optionaler Eröffnung einreihen |
-| `get_updates` | Neue Zustände, Transkriptbeiträge, Fragen und Zusammenfassungen per Cursor abrufen |
-| `get_call` | Vollständigen persistenten Anruf einschließlich Transkript lesen |
-| `follow_up_call` | Folgeanruf mit Historie und neuen Angaben starten |
-| `list_calls` | Letzte Anrufe, optional nach Status gefiltert, auflisten |
-| `cancel_call` | Wartenden oder laufenden Anruf beenden |
+| `start_call` | Queue a call with a target, context, and optional opening statement |
+| `get_updates` | Retrieve new states, transcript turns, questions, and summaries by cursor |
+| `get_call` | Retrieve the complete persisted call, including its transcript |
+| `follow_up_call` | Start a follow-up call with the previous history and new information |
+| `list_calls` | List recent calls, optionally filtered by status |
+| `cancel_call` | End a queued or active call |
 
-Typischer Ablauf:
+Typical workflow:
 
-1. Hermes ruft `start_call` auf und merkt sich `call_id`.
-2. Hermes ruft `get_updates(after_event_id=0, call_id=...)` auf.
-3. Weitere Abfragen verwenden jeweils `next_event_id` als neuen Cursor.
-4. Der Endstatus ist `completed`, `needs_input`, `failed` oder `cancelled`.
-5. Bei `needs_input` enthält der Anruf `hermes_question`; mit der Antwort startet Hermes
-   `follow_up_call`.
+1. The agent calls `start_call` and stores the returned `call_id`.
+2. The agent calls `get_updates(after_event_id=0, call_id=...)`.
+3. Each subsequent request uses `next_event_id` as its new cursor.
+4. The terminal status is `completed`, `needs_input`, `failed`, or `cancelled`.
+5. For `needs_input`, the call contains `hermes_question`; after receiving an answer, the
+   agent starts `follow_up_call`.
 
-`get_updates` unterstützt mit `wait_seconds` bis zu 25 Sekunden Long-Polling. Events sind
-in SQLite persistent und gehen bei einem Neustart nicht verloren.
+`get_updates` supports up to 25 seconds of long polling through `wait_seconds`. Events are
+persisted in SQLite and survive service restarts.
 
-## Betrieb
+## Operations
 
-Wichtige Variablen in `.env.example`:
+Important variables in `.env.example`:
 
-| Variable | Standard/Bedeutung |
+| Variable | Default and purpose |
 | --- | --- |
-| `MAX_CONCURRENT_CALLS` | `2`; an FritzBox- und Anschlusskapazität anpassen |
-| `DEFAULT_CALL_TIMEOUT` | Klingeldauer, standardmäßig 45 Sekunden |
-| `MAX_CALL_DURATION` | Harte Gesprächsgrenze, standardmäßig 900 Sekunden |
-| `CONSENT_QUESTION_ENABLED` | `true` (Standard): Einwilligungsfrage zur Transkription vor Gesprächsbeginn. `false`: direkter Einstieg nach dem KI-/Transkriptionshinweis |
-| `GEMINI_LIVE_MODEL` | Native-Audio-Modell, standardmäßig `gemini-3.1-flash-live-preview` |
-| `GEMINI_VAD_PREFIX_PADDING_MS` | Mindestdauer bis zum Sprachbeginn, standardmäßig 100 ms |
-| `GEMINI_VAD_SILENCE_MS` | Pause bis zum Turn-Ende, standardmäßig 650 ms |
-| `GEMINI_LIVE_CONNECT_TIMEOUT_SECONDS` | Zeitlimit für den Live-Verbindungsaufbau, standardmäßig 15 s |
-| `SIP_DIAL_PREFIX` | Optionales FritzBox-/Anlagen-Präfix |
+| `MAX_CONCURRENT_CALLS` | `2`; adjust to the FritzBox and line capacity |
+| `DEFAULT_CALL_TIMEOUT` | Ringing timeout, 45 seconds by default |
+| `MAX_CALL_DURATION` | Hard call duration limit, 900 seconds by default |
+| `CONSENT_QUESTION_ENABLED` | `true`: ask for transcription consent before the conversation. `false`: continue directly after the AI and transcription notice |
+| `GEMINI_LIVE_MODEL` | Native audio model, `gemini-3.1-flash-live-preview` by default |
+| `GEMINI_VAD_PREFIX_PADDING_MS` | Minimum duration before speech start, 100 ms by default |
+| `GEMINI_VAD_SILENCE_MS` | Silence before turn end, 650 ms by default |
+| `GEMINI_LIVE_CONNECT_TIMEOUT_SECONDS` | Live connection timeout, 15 seconds by default |
+| `SIP_DIAL_PREFIX` | Optional FritzBox or PBX dialing prefix |
 
-Backup der Historie:
+Back up the call history:
 
 ```bash
-docker compose stop calling-mcp
-docker run --rm -v hermes-calling_call-data:/data -v "$PWD":/backup \
+docker compose stop omnicall-mcp
+docker run --rm -v omnicall_call-data:/data -v "$PWD":/backup \
   busybox cp /data/calls.db /backup/calls.db
-docker compose start calling-mcp
+docker compose start omnicall-mcp
 ```
 
 ## Tests
@@ -142,15 +142,14 @@ docker compose config --quiet
 docker compose build
 ```
 
-Ein echter End-to-End-Anruf setzt eine erreichbare FritzBox, eine freie Amtsleitung und
-gültige Gemini-Model-Berechtigungen voraus.
+A real end-to-end call requires a reachable FritzBox, an available external line, and valid
+permissions for the configured Gemini models.
 
-## Datenschutz
+## Privacy
 
-Der Dienst informiert zu Gesprächsbeginn über KI-Einsatz und Transkription und bittet um
-Zustimmung (sofern `CONSENT_QUESTION_ENABLED=true` gesetzt ist; auch ohne die Frage bleibt
-der Hinweis bestehen). Trotzdem muss der Betreiber die für seinen Anwendungsfall geltenden Vorgaben,
-Einwilligungen, Informationspflichten, Aufbewahrungsfristen und Löschprozesse selbst
-prüfen. Die SQLite-Datenbank enthält personenbezogene Gesprächsinhalte und ist entsprechend
-zu schützen.
-# omnicall
+At the beginning of each call, the service discloses the use of AI and transcription and
+asks for consent when `CONSENT_QUESTION_ENABLED=true`. The disclosure remains in place even
+when the consent question is disabled. Operators remain responsible for verifying the laws,
+consent requirements, disclosure obligations, retention periods, and deletion processes
+that apply to their use case. The SQLite database contains personal conversation data and
+must be protected accordingly.

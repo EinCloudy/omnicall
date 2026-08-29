@@ -209,7 +209,7 @@ class GeminiClient:
   Zustimmung zum eigentlichen Anliegen über.
 """.strip()
         instruction = f"""
-Du führst im Auftrag des Hermes Agent einen echten Telefonanruf auf Deutsch.
+Du führst im Auftrag von OmniCall einen echten Telefonanruf auf Deutsch.
 
 Ziel des Anrufs:
 {call["objective"]}
@@ -230,7 +230,8 @@ Regeln:
 - Wenn das Ziel erreicht ist oder die Person das Gespräch beenden möchte, verabschiedest du dich
   zuerst hörbar, beendest deine Verabschiedung mit dem Satz "Auf Wiederhören." und rufst danach
   finish_call mit action=end auf.
-- Falls zwingend Informationen oder eine Entscheidung von Hermes fehlen, erkläre die Rücksprache,
+- Falls zwingend Informationen oder eine Entscheidung des Auftraggebers fehlen, erkläre die
+  Rücksprache,
   verabschiede dich und rufe danach finish_call mit action=needs_hermes und einer präzisen
   hermes_question auf.
 - Rufe finish_call nie auf, bevor dein abschließender gesprochener Satz erzeugt wurde.
@@ -287,7 +288,7 @@ Regeln:
     async def summarize(self, call: dict[str, Any], turns: list[dict[str, Any]]) -> str:
         transcript = "\n".join(f"{turn['speaker']}: {turn['text']}" for turn in turns)
         prompt = f"""
-Fasse dieses Telefonat für den Hermes Agent knapp und sachlich auf Deutsch zusammen.
+Fasse dieses Telefonat für den OmniCall-Auftraggeber knapp und sachlich auf Deutsch zusammen.
 Nenne Ergebnis, getroffene Vereinbarungen, bestätigte Kontaktdaten/Termine und offene Punkte.
 Keine Spekulationen, keine Überschrift und kein Markdown. Maximal 120 Wörter.
 

@@ -1,6 +1,6 @@
 import pytest
 
-from hermes_calling.service import normalize_phone_number
+from omnicall.service import normalize_phone_number
 
 
 @pytest.mark.parametrize(

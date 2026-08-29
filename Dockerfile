@@ -16,4 +16,4 @@ RUN addgroup --system --gid 10001 app \
 
 USER app
 VOLUME ["/data"]
-CMD ["hermes-calling-mcp"]
+CMD ["omnicall-mcp"]

@@ -2,8 +2,8 @@ from unittest.mock import AsyncMock, call
 
 import pytest
 
-from hermes_calling.ari import AriClient, AriError
-from hermes_calling.config import Settings
+from omnicall.ari import AriClient, AriError
+from omnicall.config import Settings
 
 
 @pytest.fixture
@@ -23,7 +23,7 @@ async def test_create_call_media_retries_until_channel_enters_stasis(
         ]
     )
     sleep = AsyncMock()
-    monkeypatch.setattr("hermes_calling.ari.asyncio.sleep", sleep)
+    monkeypatch.setattr("omnicall.ari.asyncio.sleep", sleep)
 
     resources = await ari.create_call_media("call-id")
 

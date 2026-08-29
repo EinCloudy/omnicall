@@ -1,17 +1,17 @@
-name: hermes-calling
+name: omnicall
 
 services:
   asterisk:
     build:
       context: ./asterisk
-    image: hermes-calling-asterisk:23.4.1
+    image: omnicall-asterisk:23.4.1
     network_mode: host
     restart: unless-stopped
     environment:
       ASTERISK_TERMINAL_OPTS: "-n"
-      ARI_USER: ${ARI_USER:-hermes}
+      ARI_USER: ${ARI_USER:-omnicall}
       ARI_PASSWORD: ${ARI_PASSWORD:?ARI_PASSWORD is required}
-      MEDIA_CONNECTION: ${MEDIA_CONNECTION:-hermes_media}
+      MEDIA_CONNECTION: ${MEDIA_CONNECTION:-omnicall_media}
       MEDIA_PORT: ${MEDIA_PORT:-8765}
       SIP_REGISTRAR: ${SIP_REGISTRAR:-fritz.box}
       SIP_USERNAME: ${SIP_USERNAME:?SIP_USERNAME is required}
@@ -24,10 +24,10 @@ services:
       retries: 12
       start_period: 15s
 
-  calling-mcp:
+  omnicall-mcp:
     build:
       context: .
-    image: hermes-calling-mcp:local
+    image: omnicall-mcp:local
     network_mode: host
     restart: unless-stopped
     depends_on:
@@ -42,15 +42,15 @@ services:
       DATABASE_PATH: /data/calls.db
       ARI_URL: http://127.0.0.1:8088/ari
       ARI_WS_URL: ws://127.0.0.1:8088/ari/events
-      ARI_USER: ${ARI_USER:-hermes}
+      ARI_USER: ${ARI_USER:-omnicall}
       ARI_PASSWORD: ${ARI_PASSWORD:?ARI_PASSWORD is required}
-      ARI_APP: ${ARI_APP:-hermes-calling}
+      ARI_APP: ${ARI_APP:-omnicall}
       SIP_CALLER_ID: ${SIP_CALLER_ID:?SIP_CALLER_ID is required}
       SIP_ENDPOINT: fritzbox
       SIP_DIAL_PREFIX: ${SIP_DIAL_PREFIX:-}
       MEDIA_HOST: 127.0.0.1
       MEDIA_PORT: ${MEDIA_PORT:-8765}
-      MEDIA_CONNECTION: ${MEDIA_CONNECTION:-hermes_media}
+      MEDIA_CONNECTION: ${MEDIA_CONNECTION:-omnicall_media}
       MCP_HOST: ${MCP_HOST:-127.0.0.1}
       MCP_PORT: ${MCP_PORT:-8090}
       MCP_TRANSPORT: streamable-http

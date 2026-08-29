@@ -28,17 +28,17 @@ async def lifespan(_: FastMCP):
     service = CallService(settings)
     await service.start()
     _service = service
-    logger.info("Hermes calling service started")
+    logger.info("OmniCall service started")
     try:
         yield
     finally:
         _service = None
         await service.close()
-        logger.info("Hermes calling service stopped")
+        logger.info("OmniCall service stopped")
 
 
 mcp = FastMCP(
-    "Hermes Calling",
+    "OmniCall",
     instructions=(
         "Use start_call for outbound phone tasks, then poll get_updates with the returned "
         "event cursor. Use get_call for the full persisted transcript and follow_up_call "
@@ -139,7 +139,7 @@ async def follow_up_call(
 
 @mcp.tool()
 async def get_call(call_id: str, include_transcript: bool = True) -> dict[str, Any]:
-    """Get current call state, result, open Hermes question, and persisted transcript."""
+    """Get current call state, result, open agent question, and persisted transcript."""
     call = await service().database.get_call(call_id, include_transcript=include_transcript)
     if call is None:
         raise ValueError(f"call not found: {call_id}")
@@ -156,7 +156,7 @@ async def get_updates(
     """Poll persistent call events after a cursor, optionally using a short long-poll.
 
     Save next_event_id and pass it as after_event_id on the next call. Events include status
-    changes, transcript turns, summaries, and questions that require Hermes input.
+    changes, transcript turns, summaries, and questions that require agent input.
     """
     if after_event_id < 0:
         raise ValueError("after_event_id must not be negative")

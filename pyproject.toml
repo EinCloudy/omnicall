@@ -3,7 +3,7 @@ requires = ["hatchling>=1.27"]
 build-backend = "hatchling.build"
 
 [project]
-name = "hermes-calling-mcp"
+name = "omnicall-mcp"
 version = "0.1.0"
 description = "MCP server for persistent AI phone calls through a FritzBox"
 readme = "README.md"
@@ -25,10 +25,10 @@ dev = [
 ]
 
 [project.scripts]
-hermes-calling-mcp = "hermes_calling.mcp_server:main"
+omnicall-mcp = "omnicall.mcp_server:main"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/hermes_calling"]
+packages = ["src/omnicall"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

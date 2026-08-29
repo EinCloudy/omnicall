@@ -2,7 +2,7 @@ import io
 import struct
 import wave
 
-from hermes_calling.audio import StreamingPcmResampler, normalize_tts_audio, pcm_to_wav
+from omnicall.audio import StreamingPcmResampler, normalize_tts_audio, pcm_to_wav
 
 
 def test_pcm_to_wav_has_expected_format() -> None:

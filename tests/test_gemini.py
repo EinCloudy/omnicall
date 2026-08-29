@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock
 import pytest
 from google.genai import types
 
-from hermes_calling.gemini import GeminiClient, GeminiLiveSession
+from omnicall.gemini import GeminiClient, GeminiLiveSession
 
 
 def live_settings(*, consent_question_enabled: bool = True) -> SimpleNamespace:

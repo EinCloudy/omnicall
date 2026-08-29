@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from hermes_calling.database import CallDatabase
+from omnicall.database import CallDatabase
 
 
 @pytest.fixture

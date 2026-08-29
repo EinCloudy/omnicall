@@ -1,6 +1,6 @@
 [global]
 type = global
-user_agent = Hermes-Calling
+user_agent = OmniCall
 
 [transport-udp]
 type = transport
